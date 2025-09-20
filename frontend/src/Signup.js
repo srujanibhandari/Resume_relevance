@@ -19,7 +19,7 @@ function Signup() {
     setError('');
     setSuccess('');
     try {
-      await axios.post('http://localhost:5000/api/signup', {
+      await axios.post('https://resume-relevance.onrender.com/api/signup', {
         email,
         password,
         company_name: companyName,

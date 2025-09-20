@@ -26,7 +26,7 @@ function Dashboard() {
       navigate('/login');
       return;
     }
-    axios.get('http://localhost:5000/api/resumes', {
+    axios.get('https://resume-relevance.onrender.com/api/resumes', {
       params,
       headers: { Authorization: `Bearer ${token}` }
     })
