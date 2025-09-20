@@ -76,14 +76,37 @@ llm = GoogleGenerativeAI(google_api_key=os.getenv('GEMINI_API_KEY'), model = "ge
 @app.route('/api/check_resume', methods=['POST'])
 def check_resume():
     # Accept resume and JD as files, or JD as text
-    if 'resume' not in request.files:
+
+    # Accept resume file
+    resume_file = request.files.get('resume')
+    if not resume_file:
         return jsonify({'error': 'Missing resume file'}), 400
-    if 'jd_file' not in request.files and 'job_description' not in request.form:
-        return jsonify({'error': 'Missing job description (file or text)'}), 400
+
+    # Accept JD file or JD text
+    jd_file = request.files.get('jd_file')
+    jd_text = None
+    if jd_file:
+        jd_filename = secure_filename(jd_file.filename)
+        jd_ext = os.path.splitext(jd_filename)[1].lower()
+        jd_temp_path = os.path.join('temp', jd_filename)
+        os.makedirs('temp', exist_ok=True)
+        jd_file.save(jd_temp_path)
+        if jd_ext == '.pdf':
+            jd_text = extract_text_from_pdf(jd_temp_path)
+        elif jd_ext in ['.doc', '.docx']:
+            jd_text = extract_text_from_docx(jd_temp_path)
+        else:
+            os.remove(jd_temp_path)
+            return jsonify({'error': 'Unsupported JD file type'}), 400
+        os.remove(jd_temp_path)
+    else:
+        jd_text = request.form.get('job_description', '')
+        if not jd_text:
+            return jsonify({'error': 'Missing job description (file or text)'}), 400
+
 
     job_role = request.form.get('job_role', '')
     location = request.form.get('location', '')
-    resume_file = request.files['resume']
     resume_filename = secure_filename(resume_file.filename)
     resume_ext = os.path.splitext(resume_filename)[1].lower()
     os.makedirs('temp', exist_ok=True)
@@ -97,28 +120,6 @@ def check_resume():
         os.remove(resume_temp_path)
         return jsonify({'error': 'Unsupported resume file type'}), 400
     os.remove(resume_temp_path)
-
-    # Handle JD file or text
-    jd_text = ''
-    jd_filename = None
-    if 'jd_file' in request.files:
-        jd_file = request.files['jd_file']
-        jd_filename = secure_filename(jd_file.filename)
-        jd_ext = os.path.splitext(jd_filename)[1].lower()
-        jd_temp_path = os.path.join('temp', jd_filename)
-        jd_file.save(jd_temp_path)
-        if jd_ext == '.pdf':
-            jd_text = extract_text_from_pdf(jd_temp_path)
-        elif jd_ext in ['.doc', '.docx']:
-            jd_text = extract_text_from_docx(jd_temp_path)
-        else:
-            os.remove(jd_temp_path)
-            return jsonify({'error': 'Unsupported JD file type'}), 400
-        os.remove(jd_temp_path)
-    else:
-        jd_text = request.form.get('job_description', '')
-        if not jd_text:
-            return jsonify({'error': 'Job description is empty'}), 400
 
     prompt = f"""
 You are an expert resume reviewer.
