@@ -6,3 +6,4 @@ langchain-google-genai
 docx2txt
 python-dotenv
 PyPDF2
+gunicorn
