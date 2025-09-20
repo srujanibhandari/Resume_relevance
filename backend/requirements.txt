@@ -4,3 +4,4 @@ openai
 flask-cors
 langchain-google-genai
 docx2txt
+python-dotenv
