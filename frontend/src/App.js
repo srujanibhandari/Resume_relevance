@@ -131,7 +131,7 @@ function App() {
     formData.append('resume', resumeFile);
     formData.append('job_description', jobDescription);
     try {
-      const response = await axios.post('http://localhost:5000/api/check_resume', formData, {
+      const response = await axios.post('https://resume-relevance.onrender.com/api/check_resume', formData, {
         headers: {
           'Content-Type': 'multipart/form-data'
         }
