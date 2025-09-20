@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import axios from 'axios';
+import { Link, useNavigate } from 'react-router-dom';
 
 function App() {
   const [resumeFile, setResumeFile] = useState(null);
@@ -131,7 +132,7 @@ function App() {
     formData.append('resume', resumeFile);
     formData.append('job_description', jobDescription);
     try {
-      const response = await axios.post('https://resume-relevance.onrender.com/api/check_resume', formData, {
+      const response = await axios.post('http://localhost:5000/api/check_resume', formData, {
         headers: {
           'Content-Type': 'multipart/form-data'
         }
@@ -143,8 +144,28 @@ function App() {
     setLoading(false);
   };
 
+  const navigate = useNavigate();
+  const token = localStorage.getItem('token');
+
+  const handleDashboardClick = (e) => {
+    if (!token) {
+      e.preventDefault();
+      navigate('/login');
+    }
+  };
+
   return (
     <div style={cardStyle}>
+      <div style={{ textAlign: 'right', marginBottom: 10, display: 'flex', gap: 16, justifyContent: 'flex-end' }}>
+        {token ? (
+          <>
+            <Link to="/dashboard" style={{ color: '#4f8cff', fontWeight: 600, textDecoration: 'none', fontSize: 16 }} onClick={handleDashboardClick}>Go to Dashboard</Link>
+            <Link to="/logout" style={{ color: '#ff4f4f', fontWeight: 600, textDecoration: 'none', fontSize: 16 }}>Logout</Link>
+          </>
+        ) : (
+          <Link to="/login" style={{ color: '#4f8cff', fontWeight: 600, textDecoration: 'none', fontSize: 16 }}>Login (to see dashboard)</Link>
+        )}
+      </div>
       <h2 style={{ textAlign: 'center', color: '#4f8cff', marginBottom: 28, letterSpacing: 1 }}>
         <span role="img" aria-label="search" style={{ fontSize: 32, marginRight: 8 }}>📝</span> Resume Relevance Check
       </h2>
