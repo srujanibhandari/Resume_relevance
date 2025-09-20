@@ -72,27 +72,54 @@ def login():
 # Initialize Gemini LLM via LangChain
 llm = GoogleGenerativeAI(google_api_key=os.getenv('GEMINI_API_KEY'), model = "gemini-2.0-flash")
 
+
 @app.route('/api/check_resume', methods=['POST'])
 def check_resume():
-    if 'resume' not in request.files or 'job_description' not in request.form:
-        return jsonify({'error': 'Missing resume file or job description'}), 400
+    # Accept resume and JD as files, or JD as text
+    if 'resume' not in request.files:
+        return jsonify({'error': 'Missing resume file'}), 400
+    if 'jd_file' not in request.files and 'job_description' not in request.form:
+        return jsonify({'error': 'Missing job description (file or text)'}), 400
+
     job_role = request.form.get('job_role', '')
     location = request.form.get('location', '')
-    file = request.files['resume']
-    job_description = request.form['job_description']
-    filename = secure_filename(file.filename)
-    ext = os.path.splitext(filename)[1].lower()
-    temp_path = os.path.join('temp', filename)
+    resume_file = request.files['resume']
+    resume_filename = secure_filename(resume_file.filename)
+    resume_ext = os.path.splitext(resume_filename)[1].lower()
     os.makedirs('temp', exist_ok=True)
-    file.save(temp_path)
-    if ext == '.pdf':
-        resume_text = extract_text_from_pdf(temp_path)
-    elif ext in ['.doc', '.docx']:
-        resume_text = extract_text_from_docx(temp_path)
+    resume_temp_path = os.path.join('temp', resume_filename)
+    resume_file.save(resume_temp_path)
+    if resume_ext == '.pdf':
+        resume_text = extract_text_from_pdf(resume_temp_path)
+    elif resume_ext in ['.doc', '.docx']:
+        resume_text = extract_text_from_docx(resume_temp_path)
     else:
-        os.remove(temp_path)
-        return jsonify({'error': 'Unsupported file type'}), 400
-    os.remove(temp_path)
+        os.remove(resume_temp_path)
+        return jsonify({'error': 'Unsupported resume file type'}), 400
+    os.remove(resume_temp_path)
+
+    # Handle JD file or text
+    jd_text = ''
+    jd_filename = None
+    if 'jd_file' in request.files:
+        jd_file = request.files['jd_file']
+        jd_filename = secure_filename(jd_file.filename)
+        jd_ext = os.path.splitext(jd_filename)[1].lower()
+        jd_temp_path = os.path.join('temp', jd_filename)
+        jd_file.save(jd_temp_path)
+        if jd_ext == '.pdf':
+            jd_text = extract_text_from_pdf(jd_temp_path)
+        elif jd_ext in ['.doc', '.docx']:
+            jd_text = extract_text_from_docx(jd_temp_path)
+        else:
+            os.remove(jd_temp_path)
+            return jsonify({'error': 'Unsupported JD file type'}), 400
+        os.remove(jd_temp_path)
+    else:
+        jd_text = request.form.get('job_description', '')
+        if not jd_text:
+            return jsonify({'error': 'Job description is empty'}), 400
+
     prompt = f"""
 You are an expert resume reviewer.
 Compare the following Resume and Job Description, and provide:
@@ -139,13 +166,14 @@ Resume:
 {resume_text}
 
 Job Description:
-{job_description}
+{jd_text}
 """
     result = llm(prompt)
     # Save resume review data to MongoDB
     review_data = {
-        'filename': filename,
-        'job_description': job_description,
+        'filename': resume_filename,
+        'jd_filename': jd_filename,
+        'job_description': jd_text,
         'resume_text': resume_text,
         'review_result': result,
         'job_role': job_role,

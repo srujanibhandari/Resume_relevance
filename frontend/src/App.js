@@ -4,6 +4,7 @@ import { Link, useNavigate } from 'react-router-dom';
 
 function App() {
   const [resumeFile, setResumeFile] = useState(null);
+  const [jdFile, setJdFile] = useState(null);
   const [jobDescription, setJobDescription] = useState('');
   const [result, setResult] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -127,10 +128,18 @@ function App() {
       setResult('Please upload a resume file (PDF/DOC/DOCX).');
       return;
     }
+    if (!jdFile && !jobDescription) {
+      setResult('Please provide a job description (file or text).');
+      return;
+    }
     setLoading(true);
     const formData = new FormData();
     formData.append('resume', resumeFile);
-    formData.append('job_description', jobDescription);
+    if (jdFile) {
+      formData.append('jd_file', jdFile);
+    } else {
+      formData.append('job_description', jobDescription);
+    }
     try {
       const response = await axios.post('https://resume-relevance.onrender.com/api/check_resume', formData, {
         headers: {
@@ -180,24 +189,30 @@ function App() {
         <div style={{ marginBottom: 24 }}>
           <label style={labelStyle}>
             <span role="img" aria-label="job" style={{ fontSize: 22 }}>💼</span>
-            Job Description:
+            Job Description (PDF/DOC/DOCX or text):
           </label><br />
-        <textarea
-  value={jobDescription}
-  onChange={e => setJobDescription(e.target.value)}
-  rows={6}
-  style={{
-    width: '100%',
-    marginTop: 8,
-    borderRadius: 8,
-    border: '1px solid #cce',
-    padding: 10,
-    fontSize: 16,
-    background: '#f8fbff',
-    fontFamily: 'Roboto, Segoe UI, Arial, sans-serif'
-  }}
-  required
-/>
+          <input type="file" accept=".pdf,.doc,.docx" onChange={e => setJdFile(e.target.files[0])} style={{ marginTop: 8, borderRadius: 8, border: '1px solid #cce', padding: 8, fontSize: 15, background: '#f8fbff', marginBottom: 8 }} />
+          <div style={{ color: '#888', fontSize: 13, marginBottom: 4 }}>
+            You can upload a JD file or paste JD text below (if both, file will be used).
+          </div>
+          <textarea
+            value={jobDescription}
+            onChange={e => setJobDescription(e.target.value)}
+            rows={6}
+            style={{
+              width: '100%',
+              marginTop: 8,
+              borderRadius: 8,
+              border: '1px solid #cce',
+              padding: 10,
+              fontSize: 16,
+              background: '#f8fbff',
+              fontFamily: 'Roboto, Segoe UI, Arial, sans-serif'
+            }}
+            disabled={jdFile !== null}
+            placeholder={jdFile ? 'JD file selected, text input disabled.' : 'Paste job description text here'}
+            required={!jdFile}
+          />
         </div>
         <button type="submit" style={buttonStyle} disabled={loading}>
           {loading ? <><span role="img" aria-label="loading" style={{ fontSize: 20 }}>⏳</span> Checking...</> : <><span role="img" aria-label="check" style={{ fontSize: 20 }}>✅</span> Check Relevance</>}
