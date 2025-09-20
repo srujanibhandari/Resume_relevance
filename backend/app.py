@@ -7,7 +7,7 @@ import os
 from langchain_google_genai import GoogleGenerativeAI
 from dotenv import load_dotenv
 from pymongo import MongoClient
-from backend.utils import extract_text_from_pdf, extract_text_from_docx
+from utils import extract_text_from_pdf, extract_text_from_docx
 
 
 app = Flask(__name__)
