@@ -26,7 +26,7 @@ function Dashboard() {
       navigate('/login');
       return;
     }
-    axios.get('https://resume-relevance.onrender.com/api/resumes', {
+    axios.get('http://localhost:5000/api/resumes', {
       params,
       headers: { Authorization: `Bearer ${token}` }
     })
@@ -100,7 +100,7 @@ function Dashboard() {
                 const scoreMatch = resume.review_result.match(/Relevance Score.*?(\d{1,3})/i) || resume.review_result.match(/(\d{1,3})/);
                 score = scoreMatch ? scoreMatch[1] : 'N/A';
                 // Try to extract summary (first non-empty line after Overall Brief Summary:)
-                let summaryMatch = resume.review_result.match(/Overall Brief Summary:[\s\S]*?- (.*)/i);
+                let summaryMatch = resume.review_result.match(/Overall Brief Summary:[\s\S]?- (.)/i);
                 if (!summaryMatch) {
                   // Try to get the first 1-2 lines after Overall Brief Summary:
                   const summaryBlock = resume.review_result.split(/Overall Brief Summary:/i)[1];
@@ -111,49 +111,29 @@ function Dashboard() {
                 } else {
                   summary = summaryMatch[1];
                 }
-                // Try to extract job role
-                let jobRoleMatch = resume.review_result.match(/Job Role:?\s*([\w\s\-]+)/i);
-                if (!jobRoleMatch && typeof resume.job_description === 'string') {
-                  jobRoleMatch = resume.job_description.match(/Job Role:?\s*([\w\s\-]+)/i);
-                }
-                if (jobRoleMatch) {
-                  jobRoleOut = jobRoleMatch[1].trim();
-                } else if (typeof resume.job_description === 'string') {
-                  // Try to get first line as job role if not found
-                  const firstLine = resume.job_description.split('\n')[0];
-                  jobRoleOut = firstLine.length < 60 ? firstLine.trim() : (resume.job_role || '');
-                } else {
-                  jobRoleOut = resume.job_role || '';
-                }
-                // Try to extract location
-                let locationMatch = resume.review_result.match(/Location:?\s*([\w\s,\-]+)/i);
-                if (!locationMatch && typeof resume.job_description === 'string') {
-                  // Try to match 'Location: ...' or city/state/country patterns
-                  locationMatch = resume.job_description.match(/Location:?\s*([\w\s,\-]+)/i);
-                  if (!locationMatch) {
-                    // Try to find a line with a city/state/country (simple heuristic)
-                    const locationKeywords = ['India', 'USA', 'UK', 'Hyderabad', 'Bangalore', 'Delhi', 'Mumbai', 'Chennai', 'Pune', 'Remote', 'Onsite'];
-                    const lines = resume.job_description.split('\n').map(l => l.trim()).filter(Boolean);
-                    const found = lines.find(line => locationKeywords.some(kw => line.toLowerCase().includes(kw.toLowerCase())));
-                    if (found) {
-                      locationOut = found;
-                    } else {
-                      locationOut = lines[1] && lines[1].length < 60 ? lines[1] : (resume.location || '');
-                    }
+                // Only extract job role and location from job_description
+                if (typeof resume.job_description === 'string') {
+                  let jobRoleMatch = resume.job_description.match(/Job Role:?\s*([\w\s\-]+)/i);
+                  if (jobRoleMatch) {
+                    jobRoleOut = jobRoleMatch[1].trim();
                   } else {
-                    locationOut = locationMatch[1].trim();
+                    // Try to get first line as job role if not found
+                    const firstLine = resume.job_description.split('\n')[0];
+                    jobRoleOut = firstLine.length < 60 ? firstLine.trim() : '';
                   }
-                } else if (locationMatch) {
-                  locationOut = locationMatch[1].trim();
-                } else if (typeof resume.job_description === 'string') {
-                  const lines = resume.job_description.split('\n').map(l => l.trim()).filter(Boolean);
-                  locationOut = lines[1] && lines[1].length < 60 ? lines[1] : (resume.location || '');
+                  let locationMatch = resume.job_description.match(/Location:?\s*([\w\s,\-]+)/i);
+                  if (locationMatch) {
+                    locationOut = locationMatch[1].trim();
+                  } else {
+                    locationOut = 'Remote';
+                  }
                 } else {
-                  locationOut = resume.location || '';
+                  jobRoleOut = '';
+                  locationOut = 'Remote';
                 }
               } else {
-                jobRoleOut = resume.job_role || '';
-                locationOut = resume.location || '';
+                jobRoleOut = '';
+                locationOut = 'Remote';
               }
               return (
                 <tr key={idx} style={{ borderBottom: '1px solid #e0e7ef' }}>
